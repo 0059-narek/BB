@@ -15,6 +15,8 @@ Ensure you have the following installed and in your PATH:
 - [assetfinder](https://github.com/tomnomnom/assetfinder)
 - [sublist3r](https://github.com/aboul3la/Sublist3r)
 - [httpx](https://github.com/projectdiscovery/httpx)
+- [nuclei](https://github.com/projectdiscovery/nuclei.git)
+- [subzy](https://github.com/PentestPad/subzy.git)
 
 ## 🚀 Installation & Usage
 1. Clone the repository:
