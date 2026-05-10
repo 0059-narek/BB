@@ -3,6 +3,8 @@ import subprocess
 import sys
 import time
 import argparse
+import requests
+from bs4 import BeautifulSoup
 
 # color
 G = "\033[92m"
@@ -20,7 +22,7 @@ def show_banner():
  ███  ███ ███  ███      ██      ██     ██   ██ ██      ██      ██    ██ ██  ██ ██ 
   ██████   ██████  ███████      ██     ██   ██ ███████  ██████  ██████  ██   ████ 
                                                                                   
-                          {Y}v1.1 - Created by Narek0059{C}
+                          {Y}v1.2 - Created by Narek0059{C}
     """
     print(banner)
 
@@ -86,13 +88,42 @@ if os.path.exists(sublist3r):
 sublist3rr = f"sublist3r -d {target} -o {sublist3r}"
 run_silent(sublist3rr, "Running Sublist3r enumeration")
 
+# synapsint
+print(f"{Y}[*] Running Synapsint enumeration...{C}", end="\r")
+syn_start = time.time()
+
+try:
+    synapsint_url = "https://synapsint.com/report.php"
+    payload = {"search": target, "btnradio": "1"}
+    response = requests.post(synapsint_url, data=payload, timeout=15)
+    soup = BeautifulSoup(response.text, "html.parser")
+    result = soup.find_all("a", class_="text-decoration-none text-secondary")
+
+    with open('synapsint.txt', 'w') as f:
+        for link in result:
+            href = link.get('href')
+            if href and target in href:
+                f.write(href + "\n")
+    
+    syn_end = time.time()
+    print(f"{G}[+] Running Synapsint enumeration DONE! ({round(syn_end - syn_start, 2)}s){C}")
+except Exception as e:
+    print(f"{Y}[!] Synapsint error: {e}{C}")
+
+script_end = time.time()
+total_duration = script_end - total_start
+
+print(f"\n{G}[!] Recon complete! Total time: {round(total_duration, 2)}s{C}")
+print(f"[!] Results are sorted. Run 'ls' to see the files.")
+
 # sort
-sort = f"cat {subfinder} {sublist3r} | sort -u > sort.txt"
+sort = f"cat {subfinder} synapsint.txt {sublist3r} | sort -u > sort.txt"
 run_silent(sort, "Merging and sorting subdomains")
 
 # del
 os.remove(subfinder)
 os.remove(sublist3r)
+#os.remove('synapsint.txt')
 
 # httpx 
 httpx = f"cat sort.txt | httpx -sc -title -td -t 20 -o live.txt"
@@ -111,13 +142,12 @@ run_silent(cat500, "Filtering 5xx status codes")
 
 # Nuclei
 if args.nuclei:
-    # Ստուգում ենք՝ արդյոք ֆայլը կա ու դատարկ չէ
     if os.path.exists("2xx.txt") and os.path.getsize("2xx.txt") > 0:
         timeheader = f"-H '{args.header}'" if args.header else ""
-        
-        # Գրում ենք հրամանը մեկ տողով, որ Bash-ը չշփոթվի
-        nucl = f"nuclei -l 2xx.txt -rl {args.threads} {timeheader} -o nuclei.txt -jsonl-export nuclei.json"
-        
+        if args.threads:
+            nucl = f"nuclei -l 2xx.txt -rl {args.threads} {timeheader} -o nuclei.txt -jsonl-export nuclei.json"
+        else:
+            nucl = f"nuclei -l 2xx.txt {timeheader} -o nuclei.txt -jsonl-export nuclei.json"
         run_silent(nucl, "Running Nuclei scan")
     else:
         print(f"{Y}[!] 2xx.txt is empty or missing. Skipping Nuclei.{C}")
@@ -131,6 +161,6 @@ if args.subzy:
         print(f"{Y}[!] sort.txt is empty. Skipping Subzy.{C}")
 
 script_end = time.time()
-total_duration = script_end - script_start
+total_duration = script_end - total_start
 
 print(f"[!] Recon complete! Results are sorted. Run 'ls' to see the files.")
